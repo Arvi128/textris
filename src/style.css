@@ -1,11 +1,14 @@
 :root {
   color-scheme: dark;
-  --bg: #060910;
-  --panel: #0f1520;
-  --border: #1a2638;
-  --text: #e4ecf8;
-  --muted: #7a90ad;
-  --accent: #6eb8ff;
+  --well-bg: #050508;
+  --panel-bg: #0a0a0f;
+  --panel-border: #00d4d4;
+  --panel-border-dim: #006666;
+  --text: #e8f0f0;
+  --muted: #6a8a8a;
+  --accent-cyan: #00f0f0;
+  --accent-yellow: #f0f000;
+  --accent-magenta: #f040c0;
   font-family: Inter, system-ui, sans-serif;
   line-height: 1.5;
 }
@@ -19,60 +22,67 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: radial-gradient(900px 500px at 30% -5%, #0e1e30 0%, transparent 60%),
-    radial-gradient(700px 400px at 80% 10%, #141828 0%, transparent 50%),
-    var(--bg);
+  background: var(--well-bg);
+  background-image: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 255, 255, 0.02) 2px,
+      rgba(0, 255, 255, 0.02) 4px
+    ),
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0, 240, 240, 0.12), transparent 55%);
   color: var(--text);
 }
 
 #app {
-  max-width: 780px;
+  max-width: 800px;
   margin: 0 auto;
-  padding: 1.5rem 1.25rem 2.5rem;
+  padding: 1.25rem 1rem 2rem;
 }
 
 .header {
   text-align: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
 }
 
-.header h1 {
-  margin: 0 0 0.3rem;
-  font-size: 2.2rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  background: linear-gradient(135deg, #6eb8ff 0%, #a78bfa 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.tetris-title {
+  margin: 0 0 0.5rem;
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(1.1rem, 4vw, 1.65rem);
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  color: var(--accent-yellow);
+  text-shadow: 0 0 12px rgba(240, 240, 0, 0.45), 3px 3px 0 #c08000, -1px -1px 0 #00a0a0;
 }
 
 .tagline {
   margin: 0;
   color: var(--muted);
-  font-size: 0.88rem;
-  max-width: 50ch;
+  font-size: 0.82rem;
+  max-width: 52ch;
   margin-inline: auto;
 }
 
 .tagline a {
-  color: var(--accent);
+  color: var(--accent-cyan);
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
 }
 
 .tagline code {
   font-size: 0.85em;
-  padding: 0.1em 0.3em;
-  border-radius: 3px;
-  background: rgba(110, 184, 255, 0.1);
-  color: #b8d9ff;
+  padding: 0.1em 0.35em;
+  border-radius: 2px;
+  background: rgba(0, 240, 240, 0.1);
+  color: #7fffff;
   font-family: 'JetBrains Mono', monospace;
+  border: 1px solid rgba(0, 240, 240, 0.25);
 }
 
 .game-layout {
   display: flex;
-  gap: 1.25rem;
+  gap: 1rem;
   justify-content: center;
   align-items: flex-start;
 }
@@ -87,25 +97,28 @@ body {
 .board-wrap {
   position: relative;
   flex-shrink: 0;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--border);
+  padding: 4px;
+  background: linear-gradient(145deg, #1a1a22 0%, #08080c 100%);
+  border: 3px solid var(--accent-cyan);
+  box-shadow: 0 0 20px rgba(0, 240, 240, 0.25), inset 0 0 40px rgba(0, 0, 0, 0.5),
+    0 0 0 2px var(--accent-yellow);
 }
 
 #gameCanvas {
   display: block;
+  vertical-align: middle;
 }
 
 .overlay {
   position: absolute;
-  inset: 0;
+  inset: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(6, 9, 16, 0.85);
-  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.88);
   z-index: 10;
-  transition: opacity 0.2s;
+  transition: opacity 0.15s;
+  border: 2px solid var(--accent-cyan);
 }
 
 .overlay.hidden {
@@ -115,89 +128,98 @@ body {
 
 .overlay-content {
   text-align: center;
-  padding: 2rem;
+  padding: 1.5rem;
 }
 
 .overlay-content h2 {
-  margin: 0 0 0.75rem;
-  font-size: 2rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #6eb8ff, #a78bfa);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  margin: 0 0 1rem;
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(0.95rem, 3vw, 1.25rem);
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--accent-yellow);
+  text-shadow: 0 0 10px rgba(240, 240, 0, 0.5);
 }
 
 .overlay-content p {
   margin: 0;
   color: var(--muted);
-  font-size: 0.95rem;
+  font-size: 0.8rem;
+  line-height: 1.7;
 }
 
 kbd {
   display: inline-block;
-  padding: 0.15em 0.45em;
+  padding: 0.2em 0.45em;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.82em;
+  font-size: 0.78em;
   font-weight: 600;
   line-height: 1;
-  color: #d8e4f0;
-  background: #1a2638;
-  border: 1px solid #2a3a50;
-  border-radius: 4px;
-  box-shadow: 0 1px 0 #0a1420;
+  color: #0a0a10;
+  background: linear-gradient(180deg, #f0f0a0 0%, #c8c820 100%);
+  border: 2px solid #606000;
+  border-radius: 2px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 0 #404000;
 }
 
 .sidebar {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
-  width: 200px;
+  gap: 0.65rem;
+  width: 210px;
   flex-shrink: 0;
 }
 
 .panel {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 0.85rem 1rem;
+  background: var(--panel-bg);
+  border: 2px solid var(--panel-border-dim);
+  box-shadow: 0 0 0 1px var(--accent-cyan), inset 0 0 20px rgba(0, 40, 40, 0.35);
+  padding: 0.75rem 0.85rem;
 }
 
 .panel h2 {
-  margin: 0 0 0.6rem;
-  font-size: 0.72rem;
-  font-weight: 700;
+  margin: 0 0 0.55rem;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.55rem;
+  font-weight: 400;
+  line-height: 1.5;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--muted);
+  letter-spacing: 0.06em;
+  color: var(--accent-yellow);
+  text-shadow: 0 0 6px rgba(240, 240, 0, 0.35);
 }
 
 .stat-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 0.5rem;
+  gap: 0.35rem;
   margin: 0;
 }
 
 .stat-grid div {
   text-align: center;
+  padding: 0.35rem 0.2rem;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--panel-border-dim);
 }
 
 .stat-grid dt {
   margin: 0;
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--muted);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.45rem;
+  line-height: 1.4;
+  color: var(--accent-cyan);
 }
 
 .stat-grid dd {
-  margin: 0.15rem 0 0;
-  font-size: 1.4rem;
-  font-weight: 700;
+  margin: 0.35rem 0 0;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.7rem;
+  font-weight: 400;
+  line-height: 1.3;
   font-variant-numeric: tabular-nums;
-  font-family: 'JetBrains Mono', monospace;
+  color: var(--accent-yellow);
+  text-shadow: 0 0 8px rgba(240, 240, 0, 0.25);
 }
 
 .next-list {
@@ -206,16 +228,16 @@ kbd {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.35rem;
 }
 
 .next-word {
-  padding: 0.45rem 0.65rem;
-  border-radius: 6px;
-  background: #0a0e14;
-  border: 1px solid var(--border);
+  padding: 0.4rem 0.5rem;
+  background: #050508;
+  border: 1px solid var(--panel-border-dim);
+  border-left: 3px solid var(--accent-cyan);
   font-family: Inter, sans-serif;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
@@ -226,26 +248,26 @@ kbd {
   list-style: none;
   margin: 0;
   padding: 0;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   color: var(--muted);
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.3rem;
 }
 
 .controls-list kbd {
-  margin-right: 0.2rem;
+  margin-right: 0.15rem;
 }
 
 .about-panel p {
   margin: 0;
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   color: var(--muted);
   line-height: 1.55;
 }
 
 .about-panel code {
-  font-size: 0.85em;
+  font-size: 0.9em;
   font-family: 'JetBrains Mono', monospace;
-  color: #b8d9ff;
+  color: #7fffff;
 }

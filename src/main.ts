@@ -12,6 +12,16 @@ const INITIAL_DROP_INTERVAL = 800
 const MIN_DROP_INTERVAL = 150
 const MOVE_STEP = 4
 
+const TETRIS_COLORS = [
+  { fill: '#00dede', light: '#9fffff', dark: '#006868' },
+  { fill: '#dede00', light: '#ffff9a', dark: '#686800' },
+  { fill: '#c038f0', light: '#eea8ff', dark: '#601878' },
+  { fill: '#00d818', light: '#8fff96', dark: '#007010' },
+  { fill: '#e01010', light: '#ff9898', dark: '#800808' },
+  { fill: '#2038f0', light: '#a0b0ff', dark: '#101878' },
+  { fill: '#f08800', light: '#ffd898', dark: '#804000' },
+] as const
+
 const WORD_POOL = [
   'hello', 'world', 'text', 'drop', 'line', 'fill', 'row', 'clear',
   'score', 'level', 'next', 'game', 'play', 'word', 'type', 'font',
@@ -36,14 +46,14 @@ interface LandedWord {
   width: number
   x: number
   row: number
-  hue: number
+  colorIdx: number
 }
 
 interface FallingPiece {
   word: MeasuredWord
   x: number
   y: number
-  hue: number
+  colorIdx: number
 }
 
 type GameState = 'idle' | 'playing' | 'paused' | 'gameover'
@@ -141,8 +151,8 @@ function spawnPiece() {
   const word = queue.shift()!
   fillQueue()
   const x = (BOARD_W - word.width) / 2
-  const hue = Math.floor(Math.random() * 360)
-  current = { word, x, y: 0, hue }
+  const colorIdx = Math.floor(Math.random() * TETRIS_COLORS.length)
+  current = { word, x, y: 0, colorIdx }
   renderNextQueue()
 
   if (checkOverlap(current.x, 0, current.word.width)) {
@@ -200,7 +210,7 @@ function lockPiece() {
     width: current.word.width,
     x: current.x,
     row,
-    hue: current.hue,
+    colorIdx: current.colorIdx,
   })
   checkClears()
   current = null
@@ -279,7 +289,7 @@ function swapWithNext() {
   if (!current || state !== 'playing' || queue.length < 2) return
   const oldWord = current.word
   current.word = queue[1]
-  current.hue = Math.floor(Math.random() * 360)
+  current.colorIdx = Math.floor(Math.random() * TETRIS_COLORS.length)
   current.x = Math.min(current.x, BOARD_W - current.word.width)
   if (current.x < 0) current.x = 0
   queue[1] = oldWord
@@ -296,14 +306,46 @@ function setupCanvas() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 }
 
+function drawBeveledBlock(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  colorIdx: number,
+) {
+  const c = TETRIS_COLORS[colorIdx % TETRIS_COLORS.length]!
+  const t = 2
+  ctx.fillStyle = c.fill
+  ctx.fillRect(x, y, w, h)
+  ctx.fillStyle = c.light
+  ctx.fillRect(x, y, w, t)
+  ctx.fillRect(x, y, t, h)
+  ctx.fillStyle = c.dark
+  ctx.fillRect(x, y + h - t, w, t)
+  ctx.fillRect(x + w - t, y, t, h)
+}
+
+function drawMinoText(ctx: CanvasRenderingContext2D, text: string, cx: number, cy: number) {
+  ctx.font = FONT
+  ctx.textBaseline = 'middle'
+  ctx.textAlign = 'left'
+  ctx.lineJoin = 'round'
+  ctx.lineWidth = 3
+  ctx.strokeStyle = 'rgba(0,0,0,0.85)'
+  ctx.strokeText(text, cx, cy)
+  ctx.fillStyle = '#f8f8f8'
+  ctx.fillText(text, cx, cy)
+}
+
 function draw(now: number) {
   const ctx = canvas.getContext('2d')!
 
-  ctx.fillStyle = '#0a0e14'
+  ctx.fillStyle = '#0d0d12'
   ctx.fillRect(0, 0, BOARD_W, BOARD_H)
 
   for (let r = 1; r < ROWS; r++) {
-    ctx.strokeStyle = 'rgba(255,255,255,0.04)'
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.08)'
     ctx.beginPath()
     ctx.moveTo(0, r * ROW_H)
     ctx.lineTo(BOARD_W, r * ROW_H)
@@ -314,72 +356,71 @@ function draw(now: number) {
     const fill = rowFill(r)
     if (fill > 0) {
       const pct = fill / BOARD_W
-      ctx.fillStyle = `rgba(110,184,255,${0.03 + pct * 0.07})`
+      ctx.fillStyle = `rgba(0, 255, 255, ${0.04 + pct * 0.1})`
       ctx.fillRect(0, r * ROW_H, BOARD_W, ROW_H)
 
-      ctx.fillStyle = 'rgba(110,184,255,0.35)'
-      ctx.font = '9px JetBrains Mono, monospace'
+      ctx.fillStyle = 'rgba(0, 255, 200, 0.55)'
+      ctx.font = '8px "Press Start 2P", monospace'
       ctx.textBaseline = 'bottom'
-      ctx.fillText(`${Math.round(pct * 100)}%`, 2, (r + 1) * ROW_H - 2)
+      ctx.textAlign = 'left'
+      ctx.fillText(`${Math.round(pct * 100)}`, 3, (r + 1) * ROW_H - 3)
     }
   }
 
-  const isFlashing = flashRows.size > 0 && (now - flashStart) < FLASH_DURATION
-  const flashPhase = isFlashing ? Math.sin((now - flashStart) / FLASH_DURATION * Math.PI * 4) : 0
+  const isFlashing = flashRows.size > 0 && now - flashStart < FLASH_DURATION
+  const flashPhase = isFlashing ? Math.sin(((now - flashStart) / FLASH_DURATION) * Math.PI * 4) : 0
 
   for (const w of landed) {
     const y = w.row * ROW_H
     const flashing = flashRows.has(w.row)
 
     if (flashing) {
-      const alpha = 0.5 + 0.5 * Math.abs(flashPhase)
-      ctx.fillStyle = `hsla(${w.hue}, 70%, 75%, ${alpha})`
+      const alpha = 0.45 + 0.55 * Math.abs(flashPhase)
+      ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`
       ctx.fillRect(w.x, y, w.width, ROW_H)
-    }
-
-    ctx.fillStyle = flashing
-      ? `hsla(0, 0%, 100%, ${0.6 + 0.4 * Math.abs(flashPhase)})`
-      : `hsl(${w.hue}, 70%, 78%)`
-
-    ctx.font = FONT
-    ctx.textBaseline = 'middle'
-    ctx.fillText(w.text, w.x, y + ROW_H / 2)
-
-    if (!flashing) {
-      ctx.strokeStyle = `hsla(${w.hue}, 60%, 55%, 0.4)`
-      ctx.strokeRect(w.x + 0.5, y + 0.5, w.width - 1, ROW_H - 1)
+      ctx.font = FONT
+      ctx.textBaseline = 'middle'
+      ctx.textAlign = 'left'
+      ctx.fillStyle = '#0a0a12'
+      ctx.fillText(w.text, w.x, y + ROW_H / 2)
+    } else {
+      drawBeveledBlock(ctx, w.x, y, w.width, ROW_H, w.colorIdx)
+      drawMinoText(ctx, w.text, w.x, y + ROW_H / 2)
     }
   }
 
   if (current && state === 'playing') {
     const ghostRow = findLandingRow(current)
     const ghostY = ghostRow * ROW_H
-    ctx.strokeStyle = `hsla(${current.hue}, 50%, 60%, 0.25)`
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.45)'
+    ctx.lineWidth = 1.5
     ctx.setLineDash([4, 4])
     ctx.strokeRect(current.x + 0.5, ghostY + 0.5, current.word.width - 1, ROW_H - 1)
     ctx.setLineDash([])
+    ctx.lineWidth = 1
 
-    ctx.fillStyle = `hsla(${current.hue}, 65%, 55%, 0.18)`
-    ctx.fillRect(current.x, current.y, current.word.width, ROW_H)
+    drawBeveledBlock(ctx, current.x, current.y, current.word.width, ROW_H, current.colorIdx)
+    drawMinoText(ctx, current.word.text, current.x, current.y + ROW_H / 2)
 
-    ctx.fillStyle = `hsl(${current.hue}, 80%, 88%)`
-    ctx.font = FONT
-    ctx.textBaseline = 'middle'
-    ctx.fillText(current.word.text, current.x, current.y + ROW_H / 2)
-
-    ctx.strokeStyle = `hsla(${current.hue}, 70%, 65%, 0.6)`
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)'
     ctx.strokeRect(current.x + 0.5, current.y + 0.5, current.word.width - 1, ROW_H - 1)
 
-    ctx.fillStyle = 'rgba(255,255,255,0.45)'
-    ctx.font = '10px JetBrains Mono, monospace'
+    ctx.fillStyle = 'rgba(255, 255, 0, 0.9)'
+    ctx.font = '7px "Press Start 2P", monospace'
     ctx.textBaseline = 'bottom'
-    ctx.fillText(`${Math.round(current.word.width)}px`, current.x, current.y - 2)
+    ctx.textAlign = 'left'
+    ctx.fillText(`${Math.round(current.word.width)}`, current.x, current.y - 2)
   }
 
-  ctx.strokeStyle = 'rgba(110,184,255,0.25)'
-  ctx.lineWidth = 2
-  ctx.strokeRect(0, 0, BOARD_W, BOARD_H)
+  ctx.strokeStyle = '#00f0f0'
+  ctx.shadowColor = '#00ffff'
+  ctx.shadowBlur = 8
+  ctx.lineWidth = 3
+  ctx.strokeRect(1.5, 1.5, BOARD_W - 3, BOARD_H - 3)
+  ctx.shadowBlur = 0
   ctx.lineWidth = 1
+  ctx.strokeStyle = '#ffff00'
+  ctx.strokeRect(0.5, 0.5, BOARD_W - 1, BOARD_H - 1)
 }
 
 function gameLoop(now: number) {
